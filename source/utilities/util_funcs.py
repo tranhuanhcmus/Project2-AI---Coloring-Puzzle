@@ -8,6 +8,14 @@ def negate(numbers):
 def calc_no(i, j, cells_a_row):
     return (cells_a_row * i) + j + 1
 
+def getRange(markers, i, j):
+    num_rows = len(markers)
+    num_cols=len(markers[0])
+    row_start = i - 1 if i > 0 else i
+    row_end = i + 1 if i < num_rows - 1 else i
+    col_start = j - 1 if j > 0 else j
+    col_end = j + 1 if j < num_cols - 1 else j
+    return row_start,row_end,col_start,col_end
 
 def model_to_matrix(model, rows, cols):
     matrix_out = []
@@ -20,11 +28,8 @@ def model_to_matrix(model, rows, cols):
 
 
 def count_cells_marked(markers, i, j):
-    num_rows = len(markers)
-    row_start = i - 1 if i > 0 else i
-    row_end = i + 1 if i < num_rows - 1 else i
-    col_start = j - 1 if j > 0 else j
-    col_end = j + 1 if j < len(markers[0]) - 1 else j
+    
+    row_start,row_end,col_start,col_end=getRange(markers, i, j)
 
     count = 0
     for row in range(row_start, row_end + 1):
@@ -67,28 +72,17 @@ def set_cells(cells, markers, val):
 
 
 def get_cells(matrix, markers, i, j):
-    num_rows = len(matrix)
-    row_start = i - 1 if i > 0 else i
-    row_end = i + 1 if i < num_rows - 1 else i
-    col_start = j - 1 if j > 0 else j
-    col_end = j + 1 if j < len(matrix[0]) - 1 else j
+    row_start,row_end,col_start,col_end=getRange(markers, i, j)
 
     cells = []
-    count = 0
+    
     for row in range(row_start, row_end + 1):
         for col in range(col_start, col_end + 1):
             if markers[row][col] == CellStatus.UNMARKED:
-                cell = calc_no(row, col, num_rows)
+                cell = calc_no(row, col, len(markers[0]))
                 cells.append(cell)
-            elif markers[row][col] == CellStatus.MARKED:
-                count += 1
-            # if markers[row][col] != CellStatus.BANNED:
-            #     count += 1
-            #     if markers[row][col] == CellStatus.UNMARKED:
-            #         cell = calc_no(row, col, num_rows)
-            #         cells.append(cell)
-
-    return cells, count
+            
+    return cells, count_cells_marked(markers, i, j)
 
     
 def remove_duplicate_clauses(clauses):

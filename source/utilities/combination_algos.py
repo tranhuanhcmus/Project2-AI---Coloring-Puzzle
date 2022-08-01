@@ -25,4 +25,4 @@ def generate_combination(numbers, n, k):
     markers = [False for _ in range(n)]
     result = []
     generate_combination_implement(numbers, markers, n, k, 0, result)
-    return result  # result: [{extracted: [], remaining: []}]
+    return result  

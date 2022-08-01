@@ -24,6 +24,7 @@ def backtracking(matrix, markers, num_rows, num_cols, indices, i):
 
     cells, num_cells_marked = get_cells(matrix, markers, row, col)
     k = matrix[row][col] - num_cells_marked  # number of remaining cells that can color adjacent matrix[i][j] cell.
+    print(k)
     if k == 0:
         set_cells(cells, markers, CellStatus.BANNED)
 
@@ -34,6 +35,7 @@ def backtracking(matrix, markers, num_rows, num_cols, indices, i):
         set_cells(cells, markers, CellStatus.UNMARKED)
     else:
         combination_list = generate_combination(cells, len(cells), k)
+        
         for sub_list in combination_list:
             set_cells(sub_list['extracted'], markers, CellStatus.MARKED)
             set_cells(sub_list['remaining'], markers, CellStatus.BANNED)

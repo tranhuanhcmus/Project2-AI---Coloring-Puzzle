@@ -9,6 +9,7 @@ import pysat_algo
 import backtracking_algo
 import brute_force_algo
 import threading
+import time
 
 
 def GUI():
@@ -20,7 +21,7 @@ def GUI():
     control.pack(padx=10, side=RIGHT)
     top = tk.LabelFrame(control, text="Command")
     top.pack(padx=10, pady=10)
-    creditFrame = tk.LabelFrame(control, text="Credit")
+    creditFrame = tk.LabelFrame(control)
     creditFrame.pack(padx=10, pady=10, fill=X)
     bot = tk.LabelFrame(root, text="Puzzle")
     bot.pack(fill=BOTH, expand=True, padx=5, pady=10, side=LEFT)
@@ -33,7 +34,6 @@ def GUI():
     algoMode = ["PySat", "A Star", "Brute Force", "Backtracking", "None"]
     curMode = -1
     matrix = []
-    stopFlag = False
     rtFlag = False
 
     # Function in GUI
@@ -52,24 +52,24 @@ def GUI():
             return
 
         warning.config(text="Loading puzzle .....", fg="blue")
-        okButton["state"] = DISABLED
+        loadbutton["state"] = DISABLED
         for widget in array.winfo_children():
             widget.destroy()
 
         try:
             matrix = read_file(path)
-            size = (len(matrix), len(matrix[0]))
+            rows,cols = len(matrix), len(matrix[0])
         except FileNotFoundError:
             warning.config(text="File does not exist!!!!", fg="red")
-            okButton["state"] = NORMAL
+            loadbutton["state"] = NORMAL
             return
         except ValueError:
             warning.config(text="Incorrect file format!!!!", fg="red")
-            okButton["state"] = NORMAL
+            loadbutton["state"] = NORMAL
             return
 
-        for i in range(size[0]):
-            for j in range(size[1]):
+        for i in range(rows):
+            for j in range(cols):
                 cell = " "
                 if matrix[i][j] != -1:
                     cell = str(matrix[i][j])
@@ -78,27 +78,27 @@ def GUI():
                     text=cell,
                     width=CellSize.WIDTH,
                     height=CellSize.HEIGHT,
-                    borderwidth=2,
+                    borderwidth=3,
                     relief="solid",
-                    font=("Arial", CellSize.FONTSIZE),
+                    font=("Arial", 12),
                 )
                 box.grid(row=i, column=j)
 
-        warning.config(text="Load successfully", fg="green")
-        okButton["state"] = NORMAL
+        warning.config(text="Load Matrix successfully !", fg="green")
+        loadbutton["state"] = NORMAL
         return
 
     def handleSelectAlgo():  # Select algorithm for running
-        popup = tk.Tk()
+        algorithm_menu = tk.Tk()
         nonlocal curMode
-        mode = tk.StringVar(popup, value=str(curMode))
-        popup.title("Select Algorithm")
+        mode = tk.StringVar(algorithm_menu, value=curMode)
+        algorithm_menu.title("Select Algorithm")
         titleText = tk.Label(
-            popup, text="Please choose one of algorithms below", font=("Arial", 10)
+            algorithm_menu, text="Choose one of algorithms below", font=("Arial", 10)
         )
         titleText.pack(padx=10, pady=10)
-        optionWrapper = tk.LabelFrame(popup)
-        optionWrapper.pack()
+        option = tk.LabelFrame(algorithm_menu)
+        option.pack()
         values = (
             ("None", "-1"),
             ("PySat", "0"),
@@ -107,20 +107,18 @@ def GUI():
             ("Backtracking", "3")
         )
 
-        def onClick():
-            return
-
         def handleConfirm():
             nonlocal curMode
             curMode = int(mode.get())
             algoSelected.config(text="{}".format(algoMode[curMode]))
-            popup.destroy()
+            algorithm_menu.destroy()
 
         for i, item in zip(range(len(values)), values):
-            tk.Radiobutton(optionWrapper, text=item[0], variable=mode, value=item[1], command=onClick,).grid(row=0, column=i)
-        confirmButton = tk.Button(popup, text="Confirm", command=handleConfirm)
-        confirmButton.pack(side=RIGHT, padx=10)
-        popup.geometry("450x150+%d+%d" % (root.winfo_screenwidth() / 2 - 225, root.winfo_screenheight() / 2 - 75))
+            tk.Radiobutton(option, text=item[0], variable=mode, value=item[1]).grid(row=0, column=i)
+        confirmButton = tk.Button(algorithm_menu, text="Confirm", command=handleConfirm)
+        confirmButton.pack(padx=10,pady=20)
+        #move menu to middle
+        algorithm_menu.geometry("450x150+%d+%d" % (root.winfo_screenwidth() / 2 - 225, root.winfo_screenheight() / 2 - 75))
         return
 
     def renew():
@@ -128,17 +126,9 @@ def GUI():
             widget.config(bg='white', fg="black")
         return
 
-    def redraw(markers):
-        for widget, i in zip(array.winfo_children(), range(len(array.winfo_children()))):
-            row = int(i / len(markers[0]))
-            col = i - row * len(markers[0])
-            color = "green" if markers[row][col] == CellStatus.MARKED else "red"
-            widget.config(bg=color, fg="white")
-        return
-
     def changeAllButtonState(state):
         chooseFile["state"] = state
-        okButton["state"] = state
+        loadbutton["state"] = state
         runButton["state"] = state
         clearButton["state"] = state
         algoButton["state"] = state
@@ -147,8 +137,6 @@ def GUI():
 
 
     def handleRunAlgo():  # Run algorithm to solve the puzzle
-        nonlocal stopFlag
-        stopFlag = False
         renew()
         if curMode == -1:
             warning.config(text="Please select an algorithm!!!", fg="red")
@@ -158,9 +146,9 @@ def GUI():
                 return
             changeAllButtonState(DISABLED)
             warning.config(text="Running {} .....".format(algoMode[curMode]), fg="blue")
-
             model = None
 
+            start = time.time()
             if curMode == Algorithm.PYSAT:
                 model = pysat_algo.solve(matrix)
                 changeAllButtonState(NORMAL)
@@ -174,7 +162,8 @@ def GUI():
             elif curMode == Algorithm.BACKTRACKING:
                     model = backtracking_algo.solve(matrix)
                     changeAllButtonState(NORMAL)
-
+            end = time.time()
+            
             
             if model == None:
                 warning.config(text="No solution with {}".format(algoMode[curMode]), fg="green")
@@ -185,12 +174,13 @@ def GUI():
                     path[-1] = algo_names[curMode] + '_output.txt'
                     msg = 'Output file: ' + path[-1]
                     write_file('/'.join(path), model, len(matrix), len(matrix[0]))
+                    timeval.config(text="{} s".format(end-start))
                 except ValueError:
                     msg = 'Cannot write data to file!!!'
 
                 for widget, num in zip(array.winfo_children(), model):
-                    color = "green" if num > 0 else "red"
-                    widget.config(bg=color, fg="white")
+                    color = "springgreen" if num > 0 else "deeppink"
+                    widget.config(bg=color, fg="black")
                 warning.config(text="Run {} successfully\n{}".format(algoMode[curMode], msg), fg="green")
 
         return
@@ -198,18 +188,12 @@ def GUI():
     def handleClear():  # Clear puzzle
         warning.config(text="Clearing puzzle .....", fg="blue")
         nonlocal matrix
-        nonlocal stopFlag
-        stopFlag = True
         for widget in array.winfo_children():
             widget.destroy()
         matrix.clear()
         warning.config(text="Clear puzzle successfully", fg="green")
         return
 
-    def handleStop():
-        nonlocal stopFlag
-        stopFlag = True
-        return
 
     
     # Command frame
@@ -222,8 +206,8 @@ def GUI():
     chooseFile = tk.Button(topRight, text="Choose File", fg="black", command=handleGetFile, width=13)
     chooseFile.pack(pady=5)
 
-    okButton = tk.Button(topRight, text="Load Puzzle", fg="black", command=handleDisplayArray, width=13)
-    okButton.pack(pady=5)
+    loadbutton = tk.Button(topRight, text="Load Puzzle", fg="black", command=handleDisplayArray, width=13)
+    loadbutton.pack(pady=5)
 
     runButton = tk.Button(topRight, text="Run", command=handleRunAlgo, width=13)
     runButton.pack(pady=5)
@@ -231,11 +215,7 @@ def GUI():
     clearButton = tk.Button(topRight, text="Clear Puzzle", fg="black", command=handleClear, width=13)
     clearButton.pack(pady=5)
 
-    stopButton = tk.Button(topRight, text="Stop", fg="black", command=handleStop, width=13)
-    stopButton.pack(pady=5)
-
-
-
+    
     # Area for display data
     canvas = tk.Canvas(bot)
     canvas.pack(fill=BOTH, expand=True, side=LEFT)
@@ -260,6 +240,14 @@ def GUI():
     # Create window frame
     canvas.create_window((0, 0), window=array, anchor="nw")
 
+# Notification Time
+    TimeFrame = tk.LabelFrame(creditFrame, text="Time")
+    TimeFrame.pack(side=BOTTOM, fill=X,pady=10,padx=5)
+    timeval = tk.Label(TimeFrame, text="{} s".format(0), fg="black")
+
+    timeval.pack(padx=5, pady=5)
+
+
     # Command Infomation (TOP LEFT)
     pathTitle = tk.Label(topLeft, text="Path:")
     filePath = tk.Entry(topLeft, width=50)
@@ -275,20 +263,14 @@ def GUI():
     algoButton.pack(side=RIGHT, pady=10)
 
     # Notification while running
-    mid = tk.LabelFrame(topLeft, text="Status")
-    mid.pack(side=BOTTOM, fill=X)
+    mid = tk.LabelFrame(creditFrame, text="Notification")
+    mid.pack(side=BOTTOM, fill=X,pady=10,padx=5)
     warning = tk.Label(mid, text="None", fg="black")
     warning.pack(padx=5, pady=5)
 
     # Credit
     creditText = tk.Label(creditFrame, text='Project 2: Coloring Puzzle', font=('Arial', 15))
-    creditText.pack(padx=10, pady=10)
-    creditTextBody1 = tk.Label(creditFrame, text='Programmed by:', font=('Arial', 10))
-    creditTextBody1.pack()
-    creditTextBody2 = tk.Label(creditFrame, text='Bui Tran Huan - 20127507\nNguyen Van Viet - 20127110\nNguyen Huu Nam - 20127000')
-    creditTextBody2.pack(padx=10, pady=5)
-    creditTextFooter = tk.Label(creditFrame, text='University Of Science - HCM City', font=('Arial', 10))
-    creditTextFooter.pack(padx=10, pady=10)
+    
 
     # main window size
     width = 1500 if root.winfo_screenwidth() > 1500 else root.winfo_screenwidth()
